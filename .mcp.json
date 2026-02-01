@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "gemini": {
+      "command": "npx",
+      "args": ["-y", "@aliargun/mcp-server-gemini"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
+    },
+    "firebase": {
+      "command": "firebase",
+      "args": ["--tool", "mcp"],
+      "disabled": false
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp-server"],
+      "disabled": false
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": ["-y", "@desktop-commander/mcp-server"],
+      "disabled": false
+    }
+  }
+}

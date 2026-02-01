@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": {
+      "Bash": "if [[ '{{command}}' =~ 'rm -rf|config\\.js|GEMINI_API_KEY|API_KEY' ]]; then echo '🚫 Dangerous command/sensitive file blocked'; exit 1; fi"
+    },
+    "PostToolUse": {
+      "Edit": "echo '✏️  Edited: {{file_path}}'",
+      "Write": "echo '📝 Created: {{file_path}}'",
+      "Bash": "if [[ '{{command}}' =~ 'deploy|firebase' ]]; then echo '🚀 Deployment command executed'; fi"
+    }
+  },
+  "permissions": {
+    "Bash": {
+      "prompts": [
+        "run *",
+        "*test*",
+        "*deploy*",
+        "git *",
+        "npm *",
+        "npx *",
+        "python *"
+      ]
+    }
+  },
+  "statusLine": {
+    "format": "{{context_window.used_percentage}}% | {{task_count}} tasks"
+  },
+  "language": "ko",
+  "model": "sonnet"
+}

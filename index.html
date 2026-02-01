@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>빌런 참교육</title>
+    <link rel="icon" href="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
+    <!-- TensorFlow.js (얼굴 인식용) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@1.0.5/dist/face-landmarks-detection.min.js"></script>
+  </head>
+
+  <body>
+    <!-- CRT 스캔라인 효과 -->
+    <div class="scanline"></div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="game-container">
+      <!-- 헤더 -->
+      <header class="game-header">
+        <h1 class="subtitle">심심할 때 스트레스 해소!</h1>
+      </header>
+
+      <!-- 게임 스테이지 -->
+      <div class="game-stage">
+        <!-- 스탯 바 (확장됨) -->
+        <div class="stats-bar">
+          <div class="stat-item timer-item">
+            <span class="stat-label">TIME</span>
+            <span class="stat-value timer-value" id="timer-display">30</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">SCORE</span>
+            <span class="stat-value" id="score">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">COMBO</span>
+            <span class="stat-value" id="combo">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">HIT</span>
+            <span class="stat-value" id="hit-count">0</span>
+          </div>
+        </div>
+
+        <!-- 타겟 컨테이너 -->
+        <div id="target-container" class="target-container">
+          <div class="upload-zone" id="upload-zone">
+            <div class="upload-icon">📸</div>
+            <p class="upload-text">빌런 사진을 등록하세요</p>
+
+            <!-- 빌런 정보 입력 -->
+            <div class="villain-info-form">
+              <input
+                type="text"
+                id="villain-name-input"
+                class="villain-input"
+                placeholder="빌런 이름 (예: 상사)"
+                maxlength="20"
+              />
+              <input
+                type="text"
+                id="villain-message"
+                class="villain-input"
+                placeholder="오늘의 다짐 (예: 오늘도 참아야지...)"
+                maxlength="50"
+              />
+            </div>
+
+            <div class="upload-buttons">
+              <input type="file" id="image-input" accept="image/*" hidden />
+              <button class="upload-btn" id="upload-btn">📷 새로 등록</button>
+              <button class="load-villain-btn" id="load-villain-btn">📂 저장된 빌런</button>
+            </div>
+
+            <p class="upload-subtext">저장된 빌런을 불러오거나 새로 등록하세요</p>
+          </div>
+
+          <!-- 게임 이미지가 표시될 영역 -->
+          <img id="game-image" class="game-image" style="display: none" alt="Target" />
+
+          <!-- 데미지 오버레이 (멍, 붓기, 반창고 등) -->
+          <div id="damage-overlay" class="damage-overlay"></div>
+
+          <!-- 타격 이펙트가 표시될 영역 -->
+          <div id="effects-layer" class="effects-layer"></div>
+
+          <!-- 스타트 버튼 오버레이 -->
+          <div id="start-overlay" class="start-overlay" style="display: none">
+            <button id="start-btn" class="game-start-btn">
+              <span class="start-icon">👊</span>
+              <span class="start-text">START</span>
+            </button>
+          </div>
+
+          <!-- 카운트다운 오버레이 -->
+          <div id="countdown-overlay" class="countdown-overlay" style="display: none">
+            <div class="countdown-number" id="countdown-number">3</div>
+          </div>
+
+          <!-- 로딩 오버레이 -->
+          <div id="loading-overlay" class="loading-overlay" style="display: none">
+            <div class="loading-content">
+              <div class="loading-spinner"></div>
+              <p class="loading-text">AI가 이미지를 변형 중...</p>
+              <p class="loading-subtext" id="loading-progress">준비 중</p>
+            </div>
+          </div>
+
+          <!-- 게임 오버 오버레이 (이미지 위에 투명하게 표시) -->
+          <div id="gameover-overlay" class="gameover-overlay" style="display: none">
+            <!-- 최종 점수 - 상단에 크게 표시 -->
+            <div class="gameover-score-display">
+              <div class="score-label">최종 점수</div>
+              <div class="score-value" id="final-score-big">0</div>
+            </div>
+
+            <!-- 빌런 이름 표시 -->
+            <div class="villain-name-display" id="villain-name-display"></div>
+
+            <!-- 하단 컨트롤 패널 -->
+            <div class="gameover-content">
+              <h2 class="gameover-title glitch" data-text="K.O.">K.O.</h2>
+              <div class="stars-animation">⭐✨⭐✨⭐</div>
+
+              <!-- 간단한 통계 (한 줄로) -->
+              <div class="gameover-quick-stats">
+                <span>👊 <span id="final-hits">0</span>회</span>
+                <span>🔥 <span id="max-combo">0</span>콤보</span>
+                <span>🎯 <span id="accuracy">0%</span></span>
+              </div>
+
+              <!-- 버튼 영역 -->
+              <div class="gameover-buttons">
+                <button class="reset-btn" id="reset-btn">🔄 다시하기</button>
+                <button class="save-result-btn" id="save-result-btn">💾 결과 저장</button>
+                <button class="new-villain-btn" id="new-villain-btn">📷 새 빌런</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 컨트롤 안내 -->
+      <div class="controls-guide">
+        <p>💡 <strong>PC:</strong> 클릭으로 타격 | <strong>모바일:</strong> 탭으로 타격</p>
+      </div>
+    </div>
+
+    <!-- 난이도 선택 모달 -->
+    <div id="difficulty-modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 class="modal-title">⚔️ 난이도 선택</h2>
+        <p class="modal-desc">도전할 난이도를 선택하세요</p>
+        <div class="difficulty-options">
+          <!-- JS에서 동적 생성 -->
+        </div>
+        <button id="start-game-btn" class="primary-btn start-btn">게임 시작</button>
+      </div>
+    </div>
+
+    <!-- 리더보드 모달 -->
+    <div id="leaderboard-modal" class="modal" style="display: none">
+      <div class="modal-content leaderboard-modal-content">
+        <h2 class="modal-title">🏆 리더보드</h2>
+        <div class="leaderboard-tabs">
+          <!-- JS에서 동적 생성 -->
+        </div>
+        <div id="leaderboard-list" class="leaderboard-list">
+          <!-- JS에서 동적 생성 -->
+        </div>
+        <button id="close-leaderboard" class="secondary-btn">닫기</button>
+      </div>
+    </div>
+
+    <!-- Firebase 설정 모달 (선택적) -->
+    <div id="firebase-config-modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 class="modal-title">🔥 Firebase 설정</h2>
+        <p class="modal-desc">온라인 리더보드를 위한 Firebase 설정</p>
+        <div class="input-group">
+          <label for="firebase-api-key">API Key</label>
+          <input type="text" id="firebase-api-key" placeholder="Firebase API Key" />
+        </div>
+        <div class="input-group">
+          <label for="firebase-database-url">Database URL</label>
+          <input
+            type="text"
+            id="firebase-database-url"
+            placeholder="https://your-project.firebaseio.com"
+          />
+        </div>
+        <div class="input-group">
+          <label for="firebase-project-id">Project ID</label>
+          <input type="text" id="firebase-project-id" placeholder="your-project-id" />
+        </div>
+        <div class="modal-buttons">
+          <button id="skip-firebase-btn" class="secondary-btn">건너뛰기</button>
+          <button id="save-firebase-btn" class="primary-btn">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 저장된 빌런 목록 모달 -->
+    <div id="villain-list-modal" class="modal" style="display: none">
+      <div class="modal-content villain-list-content">
+        <h2 class="modal-title">📂 저장된 빌런 목록</h2>
+        <p class="modal-desc">심심할 때마다 불러와서 참교육하세요!</p>
+
+        <div class="villain-list" id="villain-list">
+          <!-- 저장된 빌런들이 여기에 표시됨 -->
+          <p class="empty-list">저장된 빌런이 없습니다.</p>
+        </div>
+
+        <div class="modal-buttons">
+          <button id="close-villain-list-btn" class="secondary-btn">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 메인 스크립트 (ES Module) -->
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
